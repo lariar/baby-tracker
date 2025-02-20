@@ -49,79 +49,100 @@ export function useVoice() {
   }, [toast]);
 
   const stopRecognition = useCallback(() => {
+    console.log("Stopping recognition");
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-        recognitionRef.current = null;
       } catch (error) {
         console.error("Failed to stop recognition:", error);
+      } finally {
+        recognitionRef.current = null;
       }
     }
+    setTranscript("");
+    setCommandStatus("");
   }, []);
 
   const startRecognition = useCallback(() => {
-    if (!recognitionRef.current) {
-      try {
-        recognitionRef.current = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        const recognition = recognitionRef.current;
+    console.log("Starting recognition");
+    if (recognitionRef.current) {
+      stopRecognition();
+    }
 
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
+    try {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      const recognition = recognitionRef.current;
 
-        recognition.onstart = () => {
-          console.log("Voice recognition started");
-          setCommandStatus("Listening...");
-          setTranscript("");
-        };
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
 
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-          let currentTranscript = "";
-          for (let i = 0; i < event.results.length; i++) {
-            const result = event.results[i];
-            if (result.isFinal) {
-              const finalTranscript = result[0].transcript.trim();
-              console.log("Final transcript:", finalTranscript);
-              if (finalTranscript) {
-                processCommand(finalTranscript);
-              }
-            } else {
-              currentTranscript += result[0].transcript;
+      recognition.onstart = () => {
+        console.log("Recognition started successfully");
+        setCommandStatus("Listening...");
+      };
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let currentTranscript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            const finalTranscript = result[0].transcript.trim();
+            console.log("Final transcript:", finalTranscript);
+            if (finalTranscript) {
+              processCommand(finalTranscript);
             }
-          }
-          setTranscript(currentTranscript);
-        };
-
-        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          console.error("Speech recognition error", event.error);
-          setIsListening(false);
-          setCommandStatus("Recognition error: " + event.error);
-          recognitionRef.current = null;
-          toast({
-            title: "Error",
-            description: "Speech recognition failed: " + event.error,
-            variant: "destructive",
-          });
-        };
-
-        recognition.onend = () => {
-          console.log("Voice recognition ended");
-          if (isListening && !recognition.error) {
-            console.log("Starting new recognition session");
-            startRecognition();
           } else {
-            recognitionRef.current = null;
+            currentTranscript += result[0].transcript;
           }
-        };
+        }
+        setTranscript(currentTranscript);
+      };
 
-        recognition.start();
-      } catch (error) {
-        console.error("Failed to start recognition:", error);
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error("Speech recognition error:", event.error);
+        setCommandStatus(`Recognition error: ${event.error}`);
         setIsListening(false);
         recognitionRef.current = null;
-      }
+
+        toast({
+          title: "Speech Recognition Error",
+          description: `Failed to recognize speech: ${event.error}`,
+          variant: "destructive",
+        });
+      };
+
+      recognition.onend = () => {
+        console.log("Recognition ended");
+        if (isListening && !recognition.error) {
+          // Small delay before restarting to prevent rapid cycling
+          setTimeout(() => {
+            if (isListening) { // Double check we still want to listen
+              console.log("Restarting recognition after delay");
+              startRecognition();
+            }
+          }, 100);
+        } else {
+          recognitionRef.current = null;
+        }
+      };
+
+      recognition.start();
+      console.log("Recognition.start() called successfully");
+    } catch (error) {
+      console.error("Failed to initialize recognition:", error);
+      setIsListening(false);
+      recognitionRef.current = null;
+      setCommandStatus("Failed to start speech recognition");
+
+      toast({
+        title: "Error",
+        description: "Could not start speech recognition. Please try again.",
+        variant: "destructive",
+      });
     }
-  }, [isListening, processCommand, toast]);
+  }, [isListening, processCommand, stopRecognition, toast]);
 
   useEffect(() => {
     if (isListening) {
