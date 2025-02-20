@@ -1,9 +1,12 @@
 import { users, babies, events, voiceCommands } from "@shared/schema";
 import type { User, InsertUser, Baby, Event, VoiceCommand } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -17,84 +20,69 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private babies: Map<number, Baby>;
-  private events: Map<number, Event>;
-  private voiceCommands: Map<number, VoiceCommand>;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
-  private currentId: number;
 
   constructor() {
-    this.users = new Map();
-    this.babies = new Map();
-    this.events = new Map();
-    this.voiceCommands = new Map();
-    this.currentId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user = { ...insertUser, id };
-    this.users.set(id, user);
-    
+    const [user] = await db.insert(users).values(insertUser).returning();
+
     // Create a default baby for the user
     await this.createBaby({
       userId: user.id,
       name: "Baby",
     });
-    
+
     return user;
   }
 
   async getBabyByUserId(userId: number): Promise<Baby | undefined> {
-    return Array.from(this.babies.values()).find(
-      (baby) => baby.userId === userId,
-    );
+    const [baby] = await db.select().from(babies).where(eq(babies.userId, userId));
+    return baby;
   }
 
   async createBaby(baby: Partial<Baby>): Promise<Baby> {
-    const id = this.currentId++;
-    const newBaby = { ...baby, id } as Baby;
-    this.babies.set(id, newBaby);
+    const [newBaby] = await db.insert(babies).values(baby).returning();
     return newBaby;
   }
 
   async getEventsByUserId(userId: number): Promise<Event[]> {
     const baby = await this.getBabyByUserId(userId);
     if (!baby) return [];
-    
-    return Array.from(this.events.values())
-      .filter(event => event.babyId === baby.id)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    const allEvents = await db
+      .select()
+      .from(events)
+      .where(eq(events.babyId, baby.id));
+
+    return allEvents.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 
   async createEvent(event: Partial<Event>): Promise<Event> {
-    const id = this.currentId++;
-    const newEvent = { ...event, id } as Event;
-    this.events.set(id, newEvent);
+    const [newEvent] = await db.insert(events).values(event).returning();
     return newEvent;
   }
 
   async createVoiceCommand(command: Partial<VoiceCommand>): Promise<VoiceCommand> {
-    const id = this.currentId++;
-    const newCommand = { ...command, id } as VoiceCommand;
-    this.voiceCommands.set(id, newCommand);
+    const [newCommand] = await db.insert(voiceCommands).values(command).returning();
     return newCommand;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
