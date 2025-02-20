@@ -2,6 +2,13 @@ import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
 export function useVoice() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -11,19 +18,25 @@ export function useVoice() {
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   recognition.continuous = true;
   recognition.interimResults = true;
+  recognition.lang = 'en-US';
 
   const processCommand = useCallback(async (command: string) => {
     try {
-      const res = await apiRequest("POST", "/api/voice-commands", { command });
+      console.log("Processing command:", command); // Debug log
+      const res = await apiRequest("POST", "/api/voice-commands", { 
+        command,
+        timestamp: new Date().toISOString()
+      });
       const result = await res.json();
       setCommandStatus(`Processed: ${result.message}`);
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      
+
       toast({
         title: "Command processed",
         description: result.message,
       });
     } catch (error) {
+      console.error("Voice command error:", error); // Debug log
       setCommandStatus("Error processing command");
       toast({
         title: "Error",
@@ -34,18 +47,19 @@ export function useVoice() {
   }, [toast]);
 
   useEffect(() => {
-    recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcriptArray = Array.from(event.results)
         .map(result => result[0].transcript)
         .join("");
-      setTranscript(transcript);
+      setTranscript(transcriptArray);
 
       if (event.results[0].isFinal) {
-        processCommand(transcript);
+        console.log("Final transcript:", transcriptArray); // Debug log
+        processCommand(transcriptArray);
       }
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech recognition error", event.error);
       setIsListening(false);
       toast({

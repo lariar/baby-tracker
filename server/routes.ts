@@ -26,40 +26,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/voice-commands", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const data = insertVoiceCommandSchema.parse(req.body);
-    
-    // Process voice command
-    const command = data.command.toLowerCase();
-    let event;
+    console.log("Received voice command:", req.body); // Debug log
 
-    if (command.includes("feeding")) {
-      event = {
-        type: "feeding",
-        data: command,
-        timestamp: new Date(),
-        babyId: (await storage.getBabyByUserId(req.user.id))?.id,
-      };
-    } else if (command.includes("diaper")) {
-      event = {
-        type: "diaper",
-        data: command,
-        timestamp: new Date(),
-        babyId: (await storage.getBabyByUserId(req.user.id))?.id,
-      };
-    } else if (command.includes("sleep")) {
-      event = {
-        type: "sleep",
-        data: command,
-        timestamp: new Date(),
-        babyId: (await storage.getBabyByUserId(req.user.id))?.id,
-      };
-    }
+    try {
+      const data = insertVoiceCommandSchema.parse(req.body);
+      const baby = await storage.getBabyByUserId(req.user.id);
 
-    if (event) {
-      await storage.createEvent(event);
-      res.json({ message: "Event logged successfully" });
-    } else {
-      res.status(400).json({ message: "Could not understand command" });
+      if (!baby) {
+        console.error("No baby found for user:", req.user.id);
+        return res.status(400).json({ message: "No baby profile found" });
+      }
+
+      // Store the voice command
+      await storage.createVoiceCommand({
+        userId: req.user.id,
+        command: data.command,
+        timestamp: new Date(),
+        processed: false,
+      });
+
+      // Process voice command
+      const command = data.command.toLowerCase();
+      let eventType: string | null = null;
+      let eventData = command;
+
+      if (command.includes("feeding")) {
+        eventType = "feeding";
+      } else if (command.includes("diaper")) {
+        eventType = "diaper";
+      } else if (command.includes("sleep")) {
+        eventType = "sleep";
+      }
+
+      if (eventType) {
+        console.log("Creating event of type:", eventType); // Debug log
+        const event = await storage.createEvent({
+          type: eventType,
+          data: eventData,
+          timestamp: new Date(),
+          babyId: baby.id,
+        });
+        console.log("Created event:", event); // Debug log
+        res.json({ message: `Logged ${eventType} event successfully` });
+      } else {
+        console.log("Could not determine event type from command"); // Debug log
+        res.status(400).json({ message: "Could not understand command. Try saying 'feeding', 'diaper', or 'sleep'" });
+      }
+    } catch (error) {
+      console.error("Error processing voice command:", error);
+      res.status(500).json({ message: "Error processing voice command" });
     }
   });
 
