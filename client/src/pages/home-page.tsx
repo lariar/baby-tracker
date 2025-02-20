@@ -11,8 +11,9 @@ export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { isListening, toggleListening, transcript, commandStatus } = useVoice();
 
-  const { data: events } = useQuery<Event[]>({
+  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
+    refetchInterval: 2000, // Refresh every 2 seconds while the page is open
   });
 
   const addEventMutation = useMutation({
@@ -65,18 +66,29 @@ export default function HomePage() {
                     </>
                   )}
                 </Button>
+
                 {transcript && (
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="font-medium">Transcript:</p>
+                  <div className="p-4 bg-muted rounded-lg animate-pulse">
+                    <p className="font-medium">Listening:</p>
                     <p>{transcript}</p>
                   </div>
                 )}
+
                 {commandStatus && (
                   <div className="p-4 bg-primary/10 rounded-lg">
                     <p className="font-medium">Status:</p>
                     <p>{commandStatus}</p>
                   </div>
                 )}
+
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="font-medium mb-2">Voice Command Examples:</p>
+                  <ul className="space-y-2 text-sm">
+                    <li>"Feeding started at 2 PM"</li>
+                    <li>"Diaper change, wet only"</li>
+                    <li>"Sleep time started"</li>
+                  </ul>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -87,20 +99,28 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {events?.map((event) => (
-                  <div
-                    key={event.id}
-                    className="p-4 border rounded-lg flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="font-medium capitalize">{event.type}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(event.timestamp).toLocaleString()}
-                      </p>
+                {eventsLoading ? (
+                  <div className="text-center p-4">Loading events...</div>
+                ) : events && events.length > 0 ? (
+                  events.map((event) => (
+                    <div
+                      key={event.id}
+                      className="p-4 border rounded-lg flex justify-between items-center hover:bg-muted/50 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium capitalize">{event.type}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(event.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="max-w-[200px] truncate">{event.data}</div>
                     </div>
-                    <div>{event.data}</div>
+                  ))
+                ) : (
+                  <div className="text-center p-4 text-muted-foreground">
+                    No events recorded yet. Try using voice commands to log some events!
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>

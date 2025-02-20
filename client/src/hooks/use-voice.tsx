@@ -15,18 +15,16 @@ export function useVoice() {
   const [commandStatus, setCommandStatus] = useState("");
   const { toast } = useToast();
 
-  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = 'en-US';
-
   const processCommand = useCallback(async (command: string) => {
     try {
-      console.log("Processing command:", command); // Debug log
+      console.log("Processing command:", command);
+      setCommandStatus("Processing...");
+
       const res = await apiRequest("POST", "/api/voice-commands", { 
         command,
         timestamp: new Date().toISOString()
       });
+
       const result = await res.json();
       setCommandStatus(`Processed: ${result.message}`);
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
@@ -35,8 +33,11 @@ export function useVoice() {
         title: "Command processed",
         description: result.message,
       });
+
+      // Clear transcript after successful processing
+      setTranscript("");
     } catch (error) {
-      console.error("Voice command error:", error); // Debug log
+      console.error("Voice command error:", error);
       setCommandStatus("Error processing command");
       toast({
         title: "Error",
@@ -47,44 +48,67 @@ export function useVoice() {
   }, [toast]);
 
   useEffect(() => {
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcriptArray = Array.from(event.results)
-        .map(result => result[0].transcript)
-        .join("");
-      setTranscript(transcriptArray);
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
 
-      if (event.results[0].isFinal) {
-        console.log("Final transcript:", transcriptArray); // Debug log
-        processCommand(transcriptArray);
+    recognition.onstart = () => {
+      console.log("Voice recognition started");
+      setCommandStatus("Listening...");
+    };
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let currentTranscript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          const finalTranscript = result[0].transcript.trim();
+          console.log("Final transcript:", finalTranscript);
+          if (finalTranscript) {
+            processCommand(finalTranscript);
+          }
+        } else {
+          currentTranscript += result[0].transcript;
+        }
       }
+      setTranscript(currentTranscript);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech recognition error", event.error);
       setIsListening(false);
+      setCommandStatus("Recognition error: " + event.error);
       toast({
         title: "Error",
-        description: "Speech recognition failed",
+        description: "Speech recognition failed: " + event.error,
         variant: "destructive",
       });
     };
 
+    recognition.onend = () => {
+      console.log("Voice recognition ended");
+      if (isListening) {
+        recognition.start();
+      }
+    };
+
+    if (isListening) {
+      recognition.start();
+    }
+
     return () => {
       recognition.stop();
     };
-  }, [recognition, processCommand, toast]);
+  }, [isListening, processCommand, toast]);
 
   const toggleListening = useCallback(() => {
-    if (isListening) {
-      recognition.stop();
-      setIsListening(false);
-    } else {
-      recognition.start();
-      setIsListening(true);
+    setIsListening(prev => !prev);
+    if (!isListening) {
       setTranscript("");
       setCommandStatus("");
     }
-  }, [isListening, recognition]);
+  }, [isListening]);
 
   return {
     isListening,
