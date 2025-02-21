@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -104,7 +104,7 @@ export function useVoice() {
         console.error("Speech recognition error:", event.error);
         setCommandStatus(`Recognition error: ${event.error}`);
         setIsListening(false);
-        recognitionRef.current = null;
+        stopRecognition();
 
         toast({
           title: "Speech Recognition Error",
@@ -115,17 +115,9 @@ export function useVoice() {
 
       recognition.onend = () => {
         console.log("Recognition ended");
-        if (isListening && !recognition.error) {
-          // Small delay before restarting to prevent rapid cycling
-          setTimeout(() => {
-            if (isListening) { // Double check we still want to listen
-              console.log("Restarting recognition after delay");
-              startRecognition();
-            }
-          }, 100);
-        } else {
-          recognitionRef.current = null;
-        }
+        // Simply stop and cleanup, don't auto-restart
+        setIsListening(false);
+        stopRecognition();
       };
 
       recognition.start();
@@ -133,7 +125,7 @@ export function useVoice() {
     } catch (error) {
       console.error("Failed to initialize recognition:", error);
       setIsListening(false);
-      recognitionRef.current = null;
+      stopRecognition();
       setCommandStatus("Failed to start speech recognition");
 
       toast({
@@ -142,23 +134,16 @@ export function useVoice() {
         variant: "destructive",
       });
     }
-  }, [isListening, processCommand, stopRecognition, toast]);
-
-  useEffect(() => {
-    if (isListening) {
-      startRecognition();
-    } else {
-      stopRecognition();
-    }
-
-    return () => {
-      stopRecognition();
-    };
-  }, [isListening, startRecognition, stopRecognition]);
+  }, [processCommand, stopRecognition, toast]);
 
   const toggleListening = useCallback(() => {
-    setIsListening(prev => !prev);
-  }, []);
+    if (isListening) {
+      stopRecognition();
+    } else {
+      startRecognition();
+    }
+    setIsListening(!isListening);
+  }, [isListening, startRecognition, stopRecognition]);
 
   return {
     isListening,
