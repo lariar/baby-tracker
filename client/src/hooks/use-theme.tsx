@@ -13,37 +13,6 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
-const themes = {
-  boy: {
-    light: {
-      primary: "hsl(199, 89%, 48%)", // Bright blue
-      variant: "vibrant",
-      appearance: "light",
-      radius: 1,
-    },
-    dark: {
-      primary: "hsl(199, 89%, 48%)",
-      variant: "vibrant",
-      appearance: "dark",
-      radius: 1,
-    },
-  },
-  girl: {
-    light: {
-      primary: "hsl(328, 85%, 60%)", // Bright pink
-      variant: "vibrant",
-      appearance: "light",
-      radius: 1,
-    },
-    dark: {
-      primary: "hsl(328, 85%, 60%)",
-      variant: "vibrant",
-      appearance: "dark",
-      radius: 1,
-    },
-  },
-};
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useLocalStorage<ThemeType>("theme", {
     gender: "boy",
@@ -55,21 +24,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Update theme.json without page reload
-    const selectedTheme = themes[theme.gender][theme.mode];
     const root = document.documentElement;
+    root.classList.add('theme-transition');
 
-    // Update CSS variables directly
-    const hue = theme.gender === "boy" ? "199" : "328";
-    const primary = theme.gender === "boy" 
-      ? "hsl(199, 89%, 48%)" 
-      : "hsl(328, 85%, 60%)";
-
-    root.style.setProperty("--primary", primary);
-    root.style.setProperty("--theme-hue", hue);
-    root.style.setProperty("--ring", primary);
-
-    // Additional theme-specific variables
+    // Apply theme classes
     if (theme.gender === "boy") {
       root.classList.remove("theme-girl");
       root.classList.add("theme-boy");
@@ -78,19 +36,33 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add("theme-girl");
     }
 
-    // Update theme mode
+    // Apply dark mode
     if (theme.mode === "dark") {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
     }
 
-    // Update theme.json asynchronously without forcing reload
+    // Update theme.json without forcing reload
+    const selectedTheme = {
+      primary: theme.gender === "boy" ? "hsl(199, 89%, 48%)" : "hsl(328, 85%, 60%)",
+      variant: "vibrant",
+      appearance: theme.mode,
+      radius: 1,
+    };
+
     fetch("/theme.json", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(selectedTheme),
     }).catch(console.error);
+
+    // Clean up transition class after theme change
+    const timer = setTimeout(() => {
+      root.classList.remove('theme-transition');
+    }, 200);
+
+    return () => clearTimeout(timer);
   }, [theme]);
 
   return (

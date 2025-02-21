@@ -48,11 +48,13 @@
   }
 
   .theme-boy {
-    --theme-color: hsl(199, 89%, 48%);
+    --primary: hsl(199, 89%, 48%);
+    --ring: hsl(199, 89%, 48%);
   }
 
   .theme-girl {
-    --theme-color: hsl(328, 85%, 60%);
+    --primary: hsl(328, 85%, 60%);
+    --ring: hsl(328, 85%, 60%);
   }
 
   * {
@@ -60,17 +62,18 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 
   /* Smooth transitions for theme changes */
-  :root {
+  .theme-transition {
     transition: color 0.2s ease,
                 background-color 0.2s ease,
-                border-color 0.2s ease;
+                border-color 0.2s ease,
+                transform 0.2s ease;
   }
 
-  /* Responsive Design */
+  /* Responsive Typography */
   @media (max-width: 640px) {
     html {
       font-size: 14px;
@@ -91,7 +94,7 @@
 
   /* Optimize transitions for reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    :root {
+    .theme-transition {
       transition: none;
     }
   }
