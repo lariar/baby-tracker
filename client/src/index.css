@@ -5,7 +5,7 @@
 @layer base {
   :root {
     --theme-hue: 199;
-    --primary: 199 89% 48%;
+    --primary: hsl(199, 89%, 48%);
 
     --background: 0 0% 100%;
     --foreground: 224 71.4% 4.1%;
@@ -45,7 +45,14 @@
     --destructive-foreground: 210 20% 98%;
     --border: 215 27.9% 16.9%;
     --input: 215 27.9% 16.9%;
-    --ring: var(--primary);
+  }
+
+  .theme-boy {
+    --theme-color: hsl(199, 89%, 48%);
+  }
+
+  .theme-girl {
+    --theme-color: hsl(328, 85%, 60%);
   }
 
   * {
@@ -54,13 +61,38 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    transition: background-color 0.3s ease;
   }
 
   /* Smooth transitions for theme changes */
   :root {
-    transition: color 0.3s ease,
-                background-color 0.3s ease,
-                border-color 0.3s ease;
+    transition: color 0.2s ease,
+                background-color 0.2s ease,
+                border-color 0.2s ease;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+    }
+  }
+
+  @media (min-width: 641px) and (max-width: 1024px) {
+    html {
+      font-size: 15px;
+    }
+  }
+
+  @media (min-width: 1025px) {
+    html {
+      font-size: 16px;
+    }
+  }
+
+  /* Optimize transitions for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      transition: none;
+    }
   }
 }

@@ -61,8 +61,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // Update CSS variables directly
     const hue = theme.gender === "boy" ? "199" : "328";
-    root.style.setProperty("--primary", theme.gender === "boy" ? "hsl(199, 89%, 48%)" : "hsl(328, 85%, 60%)");
+    const primary = theme.gender === "boy" 
+      ? "hsl(199, 89%, 48%)" 
+      : "hsl(328, 85%, 60%)";
+
+    root.style.setProperty("--primary", primary);
     root.style.setProperty("--theme-hue", hue);
+    root.style.setProperty("--ring", primary);
+
+    // Additional theme-specific variables
+    if (theme.gender === "boy") {
+      root.classList.remove("theme-girl");
+      root.classList.add("theme-boy");
+    } else {
+      root.classList.remove("theme-boy");
+      root.classList.add("theme-girl");
+    }
 
     // Update theme mode
     if (theme.mode === "dark") {
