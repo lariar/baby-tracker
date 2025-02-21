@@ -5,13 +5,118 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, MicOff, LogOut, Baby } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
-import {ThemeSwitcher} from "@/components/theme-switcher" // Assuming ThemeSwitcher is imported from here
+import { ThemeSwitcher } from "@/components/theme-switcher";
+import { memo } from "react";
+
+// Memoize the event card to prevent unnecessary re-renders
+const EventCard = memo(({ event }: { event: Event }) => (
+  <div
+    key={event.id}
+    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors duration-200"
+  >
+    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+      <div>
+        <p className="font-medium capitalize text-primary">{event.type}</p>
+        <p className="text-sm text-muted-foreground">
+          {new Date(event.timestamp).toLocaleString()}
+        </p>
+      </div>
+      <div className="text-sm md:max-w-[200px] md:text-right break-words">
+        {event.data}
+      </div>
+    </div>
+  </div>
+));
+
+// Memoize the voice control panel to prevent unnecessary re-renders
+const VoiceControlPanel = memo(({ 
+  isListening, 
+  toggleListening, 
+  transcript, 
+  commandStatus 
+}: { 
+  isListening: boolean;
+  toggleListening: () => void;
+  transcript: string;
+  commandStatus: string;
+}) => (
+  <Card className="border-2 border-primary/10">
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <Mic className="h-5 w-5" />
+        Voice Commands
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-6">
+        <Button
+          className="w-full h-32 text-lg relative overflow-hidden transition-all duration-200"
+          variant={isListening ? "destructive" : "default"}
+          onClick={toggleListening}
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-primary/20 pointer-events-none" />
+          <div className="relative flex items-center justify-center gap-3">
+            {isListening ? (
+              <>
+                <MicOff className="h-8 w-8 animate-pulse" />
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">Stop Listening</span>
+                  <span className="text-sm opacity-90">Click to stop recording</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <Mic className="h-8 w-8" />
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">Start Listening</span>
+                  <span className="text-sm opacity-90">Click to record voice command</span>
+                </div>
+              </>
+            )}
+          </div>
+        </Button>
+
+        {transcript && (
+          <div className="p-4 bg-muted rounded-lg border animate-pulse">
+            <p className="font-medium text-sm text-muted-foreground">Listening:</p>
+            <p className="mt-1">{transcript}</p>
+          </div>
+        )}
+
+        {commandStatus && (
+          <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+            <p className="font-medium text-sm text-muted-foreground">Status:</p>
+            <p className="mt-1">{commandStatus}</p>
+          </div>
+        )}
+
+        <div className="p-4 bg-muted/50 rounded-lg border">
+          <p className="font-medium text-sm text-muted-foreground mb-3">Voice Command Examples:</p>
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary/50" />
+              "Feeding started at 2 PM"
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary/50" />
+              "Diaper change, wet only"
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary/50" />
+              "Sleep time started"
+            </li>
+          </ul>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+));
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { isListening, toggleListening, transcript, commandStatus } = useVoice();
 
-  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
+  const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
     refetchInterval: 2000,
   });
@@ -42,76 +147,12 @@ export default function HomePage() {
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="space-y-8">
-            <Card className="border-2 border-primary/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mic className="h-5 w-5" />
-                  Voice Commands
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <Button
-                    className="w-full h-32 text-lg relative overflow-hidden transition-all duration-200"
-                    variant={isListening ? "destructive" : "default"}
-                    onClick={toggleListening}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-primary/20 pointer-events-none" />
-                    <div className="relative flex items-center justify-center gap-3">
-                      {isListening ? (
-                        <>
-                          <MicOff className="h-8 w-8 animate-pulse" />
-                          <div className="flex flex-col items-start">
-                            <span className="font-semibold">Stop Listening</span>
-                            <span className="text-sm opacity-90">Click to stop recording</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="h-8 w-8" />
-                          <div className="flex flex-col items-start">
-                            <span className="font-semibold">Start Listening</span>
-                            <span className="text-sm opacity-90">Click to record voice command</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </Button>
-
-                  {transcript && (
-                    <div className="p-4 bg-muted rounded-lg border animate-pulse">
-                      <p className="font-medium text-sm text-muted-foreground">Listening:</p>
-                      <p className="mt-1">{transcript}</p>
-                    </div>
-                  )}
-
-                  {commandStatus && (
-                    <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
-                      <p className="font-medium text-sm text-muted-foreground">Status:</p>
-                      <p className="mt-1">{commandStatus}</p>
-                    </div>
-                  )}
-
-                  <div className="p-4 bg-muted/50 rounded-lg border">
-                    <p className="font-medium text-sm text-muted-foreground mb-3">Voice Command Examples:</p>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-primary/50" />
-                        "Feeding started at 2 PM"
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-primary/50" />
-                        "Diaper change, wet only"
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-primary/50" />
-                        "Sleep time started"
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <VoiceControlPanel
+              isListening={isListening}
+              toggleListening={toggleListening}
+              transcript={transcript}
+              commandStatus={commandStatus}
+            />
           </div>
 
           <Card>
@@ -124,24 +165,9 @@ export default function HomePage() {
                   <div className="text-center p-8 text-muted-foreground animate-pulse">
                     Loading events...
                   </div>
-                ) : events && events.length > 0 ? (
+                ) : events.length > 0 ? (
                   events.map((event) => (
-                    <div
-                      key={event.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors duration-200"
-                    >
-                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-                        <div>
-                          <p className="font-medium capitalize text-primary">{event.type}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(event.timestamp).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="text-sm md:max-w-[200px] md:text-right break-words">
-                          {event.data}
-                        </div>
-                      </div>
-                    </div>
+                    <EventCard key={event.id} event={event} />
                   ))
                 ) : (
                   <div className="text-center p-8 text-muted-foreground">
