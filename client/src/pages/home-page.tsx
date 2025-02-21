@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, MicOff, LogOut, Baby } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
+import {ThemeSwitcher} from "@/components/theme-switcher" // Assuming ThemeSwitcher is imported from here
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -17,7 +18,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Baby className="h-6 w-6 text-primary" />
@@ -29,6 +30,7 @@ export default function HomePage() {
             <span className="text-sm text-muted-foreground hidden md:inline">
               Welcome, {user?.username}
             </span>
+            <ThemeSwitcher />
             <Button variant="outline" size="sm" onClick={() => logoutMutation.mutate()}>
               <LogOut className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Logout</span>
