@@ -55,16 +55,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Update theme.json
+    // Update theme.json without page reload
     const selectedTheme = themes[theme.gender][theme.mode];
+    const root = document.documentElement;
+
+    // Update CSS variables directly
+    const hue = theme.gender === "boy" ? "199" : "328";
+    root.style.setProperty("--primary", theme.gender === "boy" ? "hsl(199, 89%, 48%)" : "hsl(328, 85%, 60%)");
+    root.style.setProperty("--theme-hue", hue);
+
+    // Update theme mode
+    if (theme.mode === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+
+    // Update theme.json asynchronously without forcing reload
     fetch("/theme.json", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(selectedTheme),
-    }).then(() => {
-      // Force reload styles
-      window.location.reload();
-    });
+    }).catch(console.error);
   }, [theme]);
 
   return (
