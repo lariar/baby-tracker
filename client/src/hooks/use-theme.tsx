@@ -45,7 +45,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // Update theme.json without forcing reload
     const selectedTheme = {
-      primary: theme.gender === "boy" ? "hsl(199, 89%, 48%)" : "hsl(328, 85%, 60%)",
+      primary: theme.gender === "boy" 
+        ? "hsl(210, 100%, 50%)" // Vibrant blue for boy theme
+        : "hsl(330, 90%, 55%)", // Warm pink for girl theme
       variant: "vibrant",
       appearance: theme.mode,
       radius: 1,

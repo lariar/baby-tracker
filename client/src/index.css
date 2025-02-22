@@ -4,16 +4,12 @@
 
 @layer base {
   :root {
-    --theme-hue: 199;
-    --primary: hsl(199, 89%, 48%);
-
     --background: 0 0% 100%;
     --foreground: 224 71.4% 4.1%;
     --card: 0 0% 100%;
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
-    --primary-foreground: 210 20% 98%;
     --secondary: 220 14.3% 95.9%;
     --secondary-foreground: 220.9 39.3% 11%;
     --muted: 220 14.3% 95.9%;
@@ -24,7 +20,6 @@
     --destructive-foreground: 210 20% 98%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: var(--primary);
   }
 
   .dark {
@@ -34,7 +29,6 @@
     --card-foreground: 210 20% 98%;
     --popover: 224 71.4% 4.1%;
     --popover-foreground: 210 20% 98%;
-    --primary-foreground: 220.9 39.3% 11%;
     --secondary: 215 27.9% 16.9%;
     --secondary-foreground: 210 20% 98%;
     --muted: 215 27.9% 16.9%;
@@ -48,13 +42,23 @@
   }
 
   .theme-boy {
-    --primary: hsl(199, 89%, 48%);
-    --ring: hsl(199, 89%, 48%);
+    --primary: 210 100% 50%;
+    --primary-foreground: 210 40% 98%;
+    --ring: 210 100% 50%;
+
+    /* Accent colors for boy theme */
+    --theme-accent-1: 200 100% 60%;
+    --theme-accent-2: 220 90% 55%;
   }
 
   .theme-girl {
-    --primary: hsl(328, 85%, 60%);
-    --ring: hsl(328, 85%, 60%);
+    --primary: 330 90% 55%;
+    --primary-foreground: 330 40% 98%;
+    --ring: 330 90% 55%;
+
+    /* Accent colors for girl theme */
+    --theme-accent-1: 320 85% 60%;
+    --theme-accent-2: 340 85% 55%;
   }
 
   * {
