@@ -31,7 +31,7 @@ interface EventEditorProps {
 export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const queryClient = useQueryClient();
   const [eventType, setEventType] = useState(event?.type || "feeding");
-  
+
   const form = useForm({
     resolver: zodResolver(eventDataSchema),
     defaultValues: event
@@ -50,17 +50,17 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
       if (event?.id) {
         await apiRequest(`/api/events/${event.id}`, {
           method: "PATCH",
-          data: {
-            ...data,
-            data: JSON.stringify(data.data),
+          body: JSON.stringify(data),
+          headers: {
+            "Content-Type": "application/json",
           },
         });
       } else {
         await apiRequest("/api/events", {
           method: "POST",
-          data: {
-            ...data,
-            data: JSON.stringify(data.data),
+          body: JSON.stringify(data),
+          headers: {
+            "Content-Type": "application/json",
           },
         });
       }
