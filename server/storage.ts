@@ -13,10 +13,11 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getBabyByUserId(userId: number): Promise<Baby | undefined>;
-  createBaby(baby: Partial<Baby>): Promise<Baby>;
+  createBaby(baby: { userId: number; name: string }): Promise<Baby>;
   getEventsByUserId(userId: number): Promise<Event[]>;
-  createEvent(event: Partial<Event>): Promise<Event>;
-  createVoiceCommand(command: Partial<VoiceCommand>): Promise<VoiceCommand>;
+  createEvent(event: { type: string; data: string; timestamp: Date; babyId: number }): Promise<Event>;
+  updateEvent(id: number, event: { type: string; data: string }): Promise<Event>;
+  createVoiceCommand(command: { userId: number; command: string; timestamp: Date; processed: boolean }): Promise<VoiceCommand>;
   sessionStore: session.Store;
 }
 
@@ -57,7 +58,7 @@ export class DatabaseStorage implements IStorage {
     return baby;
   }
 
-  async createBaby(baby: Partial<Baby>): Promise<Baby> {
+  async createBaby(baby: { userId: number; name: string }): Promise<Baby> {
     const [newBaby] = await db.insert(babies).values(baby).returning();
     return newBaby;
   }
@@ -74,12 +75,21 @@ export class DatabaseStorage implements IStorage {
     return allEvents.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 
-  async createEvent(event: Partial<Event>): Promise<Event> {
+  async createEvent(event: { type: string; data: string; timestamp: Date; babyId: number }): Promise<Event> {
     const [newEvent] = await db.insert(events).values(event).returning();
     return newEvent;
   }
 
-  async createVoiceCommand(command: Partial<VoiceCommand>): Promise<VoiceCommand> {
+  async updateEvent(id: number, event: { type: string; data: string }): Promise<Event> {
+    const [updatedEvent] = await db
+      .update(events)
+      .set(event)
+      .where(eq(events.id, id))
+      .returning();
+    return updatedEvent;
+  }
+
+  async createVoiceCommand(command: { userId: number; command: string; timestamp: Date; processed: boolean }): Promise<VoiceCommand> {
     const [newCommand] = await db.insert(voiceCommands).values(command).returning();
     return newCommand;
   }

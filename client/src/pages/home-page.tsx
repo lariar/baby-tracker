@@ -2,33 +2,59 @@ import { useAuth } from "@/hooks/use-auth";
 import { useVoice } from "@/hooks/use-voice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, MicOff, LogOut, Baby } from "lucide-react";
+import { Mic, MicOff, LogOut, Baby, Plus, Edit2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { memo } from "react";
+import { memo, useState } from "react";
+import { EventEditor } from "@/components/event-editor";
 
 // Memoize the event card to prevent unnecessary re-renders
-const EventCard = memo(({ event }: { event: Event }) => (
-  <div
-    key={event.id}
-    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors duration-200"
-  >
-    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-      <div>
-        <p className="font-medium capitalize text-primary">{event.type}</p>
-        <p className="text-sm text-muted-foreground">
-          {new Date(event.timestamp).toLocaleString()}
-        </p>
-      </div>
-      <div className="text-sm md:max-w-[200px] md:text-right break-words">
-        {event.data}
+const EventCard = memo(({ event, onEdit }: { event: Event; onEdit: (event: Event) => void }) => {
+  const data = JSON.parse(event.data);
+
+  const getEventSummary = (type: string, data: any) => {
+    switch (type) {
+      case "feeding":
+        return `${data.type === "formula" ? "Formula" : "Breast Milk"}${data.amount ? `, ${data.amount}oz` : ""}`;
+      case "diaper":
+        return data.type.charAt(0).toUpperCase() + data.type.slice(1);
+      case "sleep":
+        const duration = data.endTime 
+          ? Math.round((new Date(data.endTime).getTime() - new Date(data.startTime).getTime()) / (1000 * 60))
+          : null;
+        return duration ? `Duration: ${duration} minutes` : "In progress";
+      default:
+        return "";
+    }
+  };
+
+  return (
+    <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors duration-200">
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-medium capitalize text-primary">{event.type}</p>
+            <Button variant="ghost" size="icon" onClick={() => onEdit(event)}>
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {new Date(event.timestamp).toLocaleString()}
+          </p>
+          <p className="text-sm mt-1">{getEventSummary(event.type, data)}</p>
+        </div>
+        {data.notes && (
+          <p className="text-sm text-muted-foreground max-w-[200px] text-right">
+            {data.notes}
+          </p>
+        )}
       </div>
     </div>
-  </div>
-));
+  );
+});
 
-// Memoize the voice control panel to prevent unnecessary re-renders
+// Rest of your voice control panel component remains unchanged
 const VoiceControlPanel = memo(({ 
   isListening, 
   toggleListening, 
@@ -115,11 +141,18 @@ const VoiceControlPanel = memo(({
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const { isListening, toggleListening, transcript, commandStatus } = useVoice();
+  const [isEventEditorOpen, setIsEventEditorOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | undefined>();
 
   const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
     refetchInterval: 2000,
   });
+
+  const handleEventEdit = (event?: Event) => {
+    setSelectedEvent(event);
+    setIsEventEditorOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -157,7 +190,13 @@ export default function HomePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">Recent Events</CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">Recent Events</CardTitle>
+                <Button size="sm" onClick={() => handleEventEdit()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Event
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -167,7 +206,11 @@ export default function HomePage() {
                   </div>
                 ) : events.length > 0 ? (
                   events.map((event) => (
-                    <EventCard key={event.id} event={event} />
+                    <EventCard 
+                      key={event.id} 
+                      event={event} 
+                      onEdit={handleEventEdit}
+                    />
                   ))
                 ) : (
                   <div className="text-center p-8 text-muted-foreground">
@@ -180,6 +223,15 @@ export default function HomePage() {
           </Card>
         </div>
       </main>
+
+      <EventEditor
+        event={selectedEvent}
+        isOpen={isEventEditorOpen}
+        onClose={() => {
+          setIsEventEditorOpen(false);
+          setSelectedEvent(undefined);
+        }}
+      />
     </div>
   );
 }
