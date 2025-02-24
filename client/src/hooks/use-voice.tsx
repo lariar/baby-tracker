@@ -141,9 +141,15 @@ export function useVoice() {
       dispatch({ type: 'SET_PROCESSING', payload: true });
       dispatch({ type: 'SET_STATUS', payload: 'Processing...' });
 
-      const res = await apiRequest("POST", "/api/voice-commands", { 
-        command,
-        timestamp: new Date().toISOString()
+      const res = await apiRequest("/api/voice-commands", { 
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          command,
+          timestamp: new Date().toISOString()
+        })
       });
 
       const result = await res.json();
