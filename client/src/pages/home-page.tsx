@@ -11,14 +11,20 @@ import { EventEditor } from "@/components/event-editor";
 
 // Memoize the event card to prevent unnecessary re-renders
 const EventCard = memo(({ event, onEdit }: { event: Event; onEdit: (event: Event) => void }) => {
-  const data = JSON.parse(event.data);
+  let data;
+  try {
+    data = JSON.parse(event.data);
+  } catch (error) {
+    console.error(`Failed to parse event data for event ${event.id}:`, error);
+    data = { notes: event.data }; // Fallback for legacy data
+  }
 
   const getEventSummary = (type: string, data: any) => {
     switch (type) {
       case "feeding":
         return `${data.type === "formula" ? "Formula" : "Breast Milk"}${data.amount ? `, ${data.amount}oz` : ""}`;
       case "diaper":
-        return data.type.charAt(0).toUpperCase() + data.type.slice(1);
+        return data.type ? (data.type.charAt(0).toUpperCase() + data.type.slice(1)) : "Unknown";
       case "sleep":
         const duration = data.endTime 
           ? Math.round((new Date(data.endTime).getTime() - new Date(data.startTime).getTime()) / (1000 * 60))
@@ -44,7 +50,7 @@ const EventCard = memo(({ event, onEdit }: { event: Event; onEdit: (event: Event
           </p>
           <p className="text-sm mt-1">{getEventSummary(event.type, data)}</p>
         </div>
-        {data.notes && (
+        {data?.notes && (
           <p className="text-sm text-muted-foreground max-w-[200px] text-right">
             {data.notes}
           </p>
